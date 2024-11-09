@@ -2,6 +2,10 @@
 #define GAME_H
 
 #include <random>
+#include <thread>
+#include <future>
+#include <mutex>
+#include <condition_variable>
 #include "SDL.h"
 #include "controller.h"
 #include "renderer.h"
@@ -30,6 +34,12 @@ private:
 
     void PlaceFood();
     void Update();
+
+    std::thread update_thread;
+    std::mutex mtx;
+    std::condition_variable cv;
+    std::promise<void> exit_signal;
+    std::shared_future<void> exit_future;
 };
 
 #endif

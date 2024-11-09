@@ -1,5 +1,7 @@
 #include "game.h"
 #include <iostream>
+#include <thread>
+#include <future>
 #include "SDL.h"
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
@@ -7,7 +9,9 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
       random_h(0, static_cast<int>(grid_height - 1)),
-      scoreManager("highscore.txt") {
+      scoreManager("highscore.txt"),
+      exit_future(exit_signal.get_future().share()) 
+{
   PlaceFood();
 }
 
@@ -20,34 +24,43 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   int frame_count = 0;
   bool running = true;
 
+  update_thread = std::thread([&]() {
+      while (exit_future.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+          Update();
+          std::this_thread::sleep_for(std::chrono::milliseconds(target_frame_duration));
+      }
+  });
+
   while (running) {
     frame_start = SDL_GetTicks();
 
-    // Input, Update, Render - the main game loop.
+    // Input, Render - main game loop
     controller.HandleInput(running, snake);
-    Update();
     renderer.Render(snake, food);
 
     frame_end = SDL_GetTicks();
 
-    // Keep track of how long each loop through the input/update/render cycle
-    // takes.
+    // Keep track of frame duration
     frame_count++;
     frame_duration = frame_end - frame_start;
 
-    // After every second, update the window title.
+    // Update window title every second
     if (frame_end - title_timestamp >= 1000) {
       renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
 
-    // If the time for this frame is too small (i.e. frame_duration is
-    // smaller than the target ms_per_frame), delay the loop to
-    // achieve the correct frame rate.
+    // Delay to maintain target frame rate
     if (frame_duration < target_frame_duration) {
       SDL_Delay(target_frame_duration - frame_duration);
     }
+  }
+
+  // Stop the update thread
+  exit_signal.set_value();
+  if (update_thread.joinable()) {
+    update_thread.join();
   }
 
   // Save high score when game ends
@@ -71,6 +84,13 @@ void Game::PlaceFood() {
 void Game::Update() {
   if (!snake.alive) return;
 
+  // Lock the snake state
+  std::lock_guard<std::mutex> lock(mtx);
+
+  // Save old size and score
+  int old_size = snake.size;
+  int old_score = score;
+
   snake.Update();
 
   int new_x = static_cast<int>(snake.head_x);
@@ -80,9 +100,14 @@ void Game::Update() {
   if (food.x == new_x && food.y == new_y) {
     score++;
     PlaceFood();
-    // Grow snake and increase speed.
+    // Grow snake and increase speed
     snake.GrowBody();
     snake.speed += 0.02;
+  }
+
+  // Check if snake state actually changed
+  if (snake.size != old_size || score != old_score) {
+    mtx.unlock();
   }
 }
 
