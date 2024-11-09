@@ -125,9 +125,9 @@ After a successful build, you can run the game with:
 ### Concurrency - meet at least 2 criteria
 
 - **Multithreading**: Uses multithreading in the project.
-  - N/A in this case.
+  - File: `src/game.cpp`
 - **Mutex**: Uses mutex to protect shared data.
-  - N/A in this case.
+  - File: `src/game.cpp`
 
 ## References
 
