@@ -54,7 +54,6 @@ Use CMake to build the project.
 ```sh
 mkdir build
 cd build
-export LDFLAGS="-pthread"
 cmake ..
 make
 ```
