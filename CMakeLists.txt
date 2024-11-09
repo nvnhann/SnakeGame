@@ -20,4 +20,12 @@ include_directories(${SDL2_INCLUDE_DIRS})
 
 find_package(Threads REQUIRED)
 
-target_link_libraries(SnakeGame ${SDL2_LIBRARIES} Threads::Threads)
+# Clean up SDL2_LIBRARIES from any unwanted whitespace
+string(REPLACE " " ";" SDL2_LIBRARIES_CLEANED ${SDL2_LIBRARIES})  # Replace spaces with semicolons
+foreach(LIB ${SDL2_LIBRARIES_CLEANED})
+    string(STRIP "${LIB}" LIB_CLEANED)  # Strip any leading/trailing whitespace
+    target_link_libraries(SnakeGame ${LIB_CLEANED})
+endforeach()
+
+# Link pthread explicitly
+target_link_libraries(SnakeGame Threads::Threads pthread)
