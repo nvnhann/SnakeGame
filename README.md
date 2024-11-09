@@ -28,7 +28,7 @@ This project is a modern version of the classic Snake game, written in C++. The 
 ### Step 1: Clone the Project
 
 ```sh
-git clone https://github.com/username/SnakeGame.git
+git clone https://github.com/nvnhann/SnakeGame.git
 cd SnakeGame
 ```
 
